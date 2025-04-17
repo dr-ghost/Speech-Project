@@ -1,44 +1,93 @@
-from wavlm import wavlm_large
-from hifigan import hifigan_wavlm
-from knn import KNeighborsVC, knn_vc
+from .wavlm import wavlm_large
+from .hifigan import hifigan_wavlm
+from .knn import KNeighborsVC
 from tqdm import tqdm
 
-from hallucinator.data import VCTKDataset, HallucinatorSetDataset
-from hallucinator import SetDDPM, cosine_beta_schedule
+import os
+import gdown
+
+import torchaudio
+from .hallucinator.data import VCTKDataset, HallucinatorSetDataset
+from .hallucinator import SetDDPM, cosine_beta_schedule
 import torch
 from torch.nested import nested_tensor
 
-from utils import wavlm_embedding, wavlm_func_gen
+from .phantom import PhantomTransformer, ready_made_model
+
+from .knn import vc
+
+from .utils import wavlm_embedding, wavlm_func_gen
 from warnings import filterwarnings
 filterwarnings("ignore")
 
+def vc_demo(src_path, dest_path, out_path):
+    set_hallucinator = SetDDPM(
+        T_timesteps=255, 
+        schedule=cosine_beta_schedule,
+        device=torch.device('cuda:0')
+    )
+    file_ids = [
+        "1A4WiJ27Q1tBfUFKLAb9jNddiYHmtLEfn",
+    ]
+    
+    # Desired output file names
+    file_names = ["halu_model.pt"]
+    
+    # Google Drive direct download URL base format
+    base_url = "https://drive.google.com/uc?export=download&id="
+    
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    download_dir = os.path.join(current_dir, "hallucinator", "checkpoints")
+    
+    if not os.path.exists(download_dir):
+        os.makedirs(download_dir)
+        
+    url = base_url + file_ids[0]
+    output_path = os.path.join(download_dir, file_names[0])
+    
+    print(f"Downloading {file_names[0]} from {url}...")
+    gdown.download(url, output_path, quiet=False)
+    print(f"Downloaded {file_names[0]} to {output_path}")
+    
+    ph = ready_made_model()
+    
+    vc_model = vc(hallucinator=set_hallucinator, transf=ph)
+    
+    src_seq = vc_model.get_features(src_path)
+    
+    target_seq = vc_model.get_matching_set(dest_path)
+    
+    out_wav =vc_model.match(src_seq, target_seq, topk=4)
+    
+    torchaudio.save(out_path, out_wav, 16000)
 if __name__ == "__main__":
     
-    wavlm_model = wavlm_large()
-    wavlm_model.eval()
-    for param in wavlm_model.parameters():
-        param.requires_grad = False
-        
-    wavlm_model = torch.compile(wavlm_model)
-    
-    vctk_dat = VCTKDataset(root_dir="models/hallucinator/dataset/VCTK-Corpus", wavlm_fn=wavlm_embedding, wavlm=wavlm_model, device=torch.device("cuda"))
-    # print(len(vctk_dat))
-    
-    # min = 29 max = 963 seqs
-    
-    hallu_dat = HallucinatorSetDataset(None, hall_dataset_path="models/hallucinator/dataset/Hallu-Corpus", exists_hall_dataset=True)
-    
-    set_ddpm = SetDDPM(
-        T_timesteps=255,
+    set_hallucinator = SetDDPM(
+        T_timesteps=255, 
         schedule=cosine_beta_schedule,
-        device=torch.device("cuda")
+        device=torch.device('cuda:0')
     )
     
-    dct = hallu_dat[0]
+    src_path = ''
+    dest_path = ''
+    
+    out_path = ''
+    
+    ph = ready_made_model()
+    
+    vc_model = vc(hallucinator=set_hallucinator, transf=ph)
+    
+    src_seq = vc_model.get_features(src_path)
+    
+    target_seq = vc_model.get_matching_set(dest_path)
+    
+    out_wav =vc_model.match(src_seq, target_seq, topk=4)
+    
+    torchaudio.save(out_path, out_wav, 16000)
     
     
-    # set_ddpm.sample_batch(64, [200 for i in range(64)], nested_tensor([dct['total_speech_set']]), nested_tensor([dct['mask']]))
     
-    set_ddpm.train(20, hallu_dat, batch_size=64, model_save_path="models/hallucinator/checkpoints/test_1_hallu.pt")
+    
     
     

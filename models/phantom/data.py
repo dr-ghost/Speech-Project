@@ -156,43 +156,24 @@ class PhantomSetDataset(Dataset):
         file_name = embeds["file_name"]
         sample_rate = embeds["sample_rate"]
         
-        N, _ = embeds["wavlm_embeds"].shape
+        # N, _ = embeds["wavlm_embeds"].shape
 
-        permuted_idx = torch.randperm(N)
+        # permuted_idx = torch.randperm(N)
 
-        sample_idx = permuted_idx[:200]
+        # sample_idx = permuted_idx[:200]
 
-        wavlm_embeds = embeds["wavlm_embeds"][sample_idx, :]
+        wavlm_embeds_seq = embeds["wavlm_embeds"][:200, :]
         
         
         # # randomly permute wavlm_embeds along dim=1 using
-        wavlm_embeds = wavlm_embeds[torch.randperm(wavlm_embeds.shape[0]), :]
+        wavlm_embeds_set = wavlm_embeds_seq[torch.randperm(wavlm_embeds_seq.shape[0]), :]
 
         
-        n_masked = random.randint(self.MIN_MASKED, wavlm_embeds.shape[0] - self.MAX_MASKED_PAD)
         
-        
-        # Randomly select indices to mask
-        mask_indices = random.sample(range(wavlm_embeds.shape[0]), n_masked)
-        mask_indices = sorted(mask_indices)
-        mask_indices = torch.tensor(mask_indices)
-        
-        
-        # Create a mask tensor
-        mask_tensor = torch.ones(wavlm_embeds.shape[0], dtype=torch.bool)
-        
-        mask_tensor[mask_indices] = False
-        
-        # create another tensor that basically has all the masked embeddings
-        masked_embeds = wavlm_embeds[~mask_tensor]
-        
-        # # create another tensor that has all the unmasked embeddings
-        # unmasked_embeds = wavlm_embeds[~mask_tensor]
         
         return{
-            "masked_out_set": masked_embeds,
-            "total_speech_set": wavlm_embeds,
-            "mask": mask_tensor 
+            "wavlm_embeds_seq": wavlm_embeds_seq,
+            "wavlm_embeds_seq": wavlm_embeds_set
         }
         
         

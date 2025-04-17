@@ -5,15 +5,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchaudio
 import torchaudio.transforms as T
-from hifigan.models import Generator as HiFiGAN
-from hifigan.utils import AttrDict
+from .hifigan.models import Generator as HiFiGAN
+from .hifigan.utils import AttrDict
 from torch import Tensor
 from torchaudio.sox_effects import apply_effects_tensor
-from wavlm.WavLM import WavLM
+from .wavlm.WavLM import WavLM
 import numpy as np
 
-from hifigan import hifigan_wavlm
-from wavlm import wavlm_large
+from .hifigan import hifigan_wavlm
+from .wavlm import wavlm_large
 
 def generate_matrix_from_index(A, len=25):
     matrix = np.zeros(len, dtype=float)
@@ -180,7 +180,7 @@ class KNeighborsVC(nn.Module):
         else: pred_wav = prediction
         return pred_wav
     
-def knn_vc(pretrained=True, progress=True, prematched=True, device='cuda') -> KNeighborsVC:
+def vc(pretrained=True, progress=True, prematched=True, hallucinator=None, transf=None, device='cuda') -> KNeighborsVC:
     """ Load kNN-VC (WavLM encoder and HiFiGAN decoder). Optionally use vocoder trained on `prematched` data. """
     hifigan, hifigan_cfg = hifigan_wavlm(pretrained, progress, prematched, device)
     wavlm = wavlm_large(pretrained, progress, device)

@@ -1,5 +1,5 @@
 import torch
-from wavlm import wavlm_large, WavLM
+from .wavlm import wavlm_large, WavLM
 
 from functools import partial
 import warnings
